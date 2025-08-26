@@ -1,0 +1,285 @@
+<!doctype html>
+
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Facebook Clone — Monolítico Limpio</title>
+  <style>
+    :root{--bg:#0f1419;--card:#131a22;--muted:#94a3b8;--text:#e6edf3;--brand:#1d9bf0;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444;--border:#243447}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica,Arial; background:linear-gradient(120deg,#0b1020,#0f1419 30%,#0b1020);color:var(--text)}
+    .wrap{max-width:980px;margin:0 auto;padding:24px}
+    header{display:flex;align-items:center;gap:12px;padding:12px 0}
+    header .logo{font-weight:800;font-size:20px;letter-spacing:.5px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+    .grid{display:grid;gap:16px}
+    .grid.cols{grid-template-columns:1.3fr .7fr}
+    .hidden{display:none}
+    form{display:grid;gap:10px}
+    input,textarea,button{font:inherit}
+    input,textarea{background:#0b1220;border:1px solid var(--border);color:var(--text);border-radius:12px;padding:12px}
+    textarea{min-height:96px;resize:vertical}
+    button{border:0;border-radius:12px;padding:12px 14px;background:var(--brand);color:white;font-weight:700;cursor:pointer}
+    button.secondary{background:#202b3a}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .muted{color:var(--muted)}
+    .row{display:flex;align-items:center;gap:10px}
+    .space{height:8px}
+    .post{padding:16px;border-bottom:1px solid var(--border)}
+    .post:last-child{border-bottom:0}
+    .post .meta{font-size:12px;color:var(--muted)}
+    .actions{display:flex;gap:8px;margin-top:8px}
+    .pill{font-size:12px;padding:6px 10px;border-radius:999px;background:#182131;border:1px solid var(--border)}
+    .notice{padding:10px 12px;border-radius:10px}
+    .notice.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35)}
+    .notice.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35)}
+    .center{display:grid;place-items:center;min-height:60vh}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+        <path d="M17 2H7a5 5 0 0 0-5 5v10a5 5 0 0 0 5 5h6v-7H9v-3h4V9a4 4 0 0 1 4-4h3v3h-3a1 1 0 0 0-1 1v3h4l-1 3h-3v7h1a5 5 0 0 0 5-5V7a5 5 0 0 0-5-5Z" fill="currentColor"/>
+      </svg>
+      <div class="logo">Facebook Clone</div>
+      <div class="muted" id="envHint" style="margin-left:auto"></div>
+    </header><!-- AUTH VIEW -->
+<section id="authView" class="grid" style="grid-template-columns:1fr 1fr; gap:24px;">
+  <div class="card" style="padding:20px">
+    <h2 style="margin:0 0 12px">Crear cuenta</h2>
+    <form id="formRegister">
+      <input id="regName" placeholder="Nombre" autocomplete="name" required />
+      <input id="regEmail" type="email" placeholder="Correo" autocomplete="email" required />
+      <input id="regPass" type="password" placeholder="Contraseña" autocomplete="new-password" required />
+      <button id="btnRegister" type="submit">Registrarse</button>
+      <div id="regMsg" class="muted"></div>
+    </form>
+  </div>
+  <div class="card" style="padding:20px">
+    <h2 style="margin:0 0 12px">Iniciar sesión</h2>
+    <form id="formLogin">
+      <input id="logEmail" type="email" placeholder="Correo" autocomplete="email" required />
+      <input id="logPass" type="password" placeholder="Contraseña" autocomplete="current-password" required />
+      <button id="btnLogin" type="submit">Entrar</button>
+      <div id="logMsg" class="muted"></div>
+    </form>
+  </div>
+</section>
+
+<!-- APP VIEW -->
+<section id="appView" class="hidden">
+  <div class="grid cols">
+    <main class="card" style="padding:0">
+      <div style="padding:16px;border-bottom:1px solid var(--border)">
+        <form id="formPost" class="grid">
+          <textarea id="postContent" placeholder="¿Qué estás pensando?" required></textarea>
+          <div class="row" style="justify-content:space-between">
+            <div class="muted" id="postMsg"></div>
+            <div class="row">
+              <button class="secondary" type="button" id="btnLogout">Cerrar sesión</button>
+              <button type="submit">Publicar</button>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div id="feed"></div>
+    </main>
+    <aside class="card" style="padding:16px">
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <div id="hello" style="font-weight:700"></div>
+          <div class="muted" id="userInfo"></div>
+        </div>
+        <span class="pill" id="statusPill">offline</span>
+      </div>
+      <div class="space"></div>
+      <div class="notice ok" id="hintBox">Consejo: cambia la URL de la API arriba a producción cuando despliegues.</div>
+    </aside>
+  </div>
+</section>
+
+<!-- LOADER / EMPTY STATE -->
+<section id="loading" class="center hidden"><div class="muted">Cargando…</div></section>
+
+  </div>  <script>
+    // ======= Configuración =======
+    // Cambia esto cuando subas el backend (Render/Railway/Heroku)
+    const API_BASE = (window.API_BASE_OVERRIDE || "http://localhost:3000");
+
+    // ======= Utilidades =======
+    const qs = (s, el=document) => el.querySelector(s);
+    const ce = (tag, attrs={}) => Object.assign(document.createElement(tag), attrs);
+    const show = (el) => el.classList.remove('hidden');
+    const hide = (el) => el.classList.add('hidden');
+
+    const state = {
+      user: null, // { email, name }
+      posts: []   // [{ _id?, author, content, createdAt }]
+    };
+
+    function setStatus(text){
+      qs('#statusPill').textContent = text;
+    }
+
+    function setEnvHint(){
+      const u = new URL(API_BASE, location.href);
+      qs('#envHint').textContent = `API: ${u.origin}`;
+    }
+
+    function formatDate(iso){
+      const d = new Date(iso || Date.now());
+      return d.toLocaleString();
+    }
+
+    function swapToApp(){
+      hide(qs('#authView'));
+      hide(qs('#loading'));
+      show(qs('#appView'));
+      qs('#hello').textContent = `Bienvenido, ${state.user?.name || 'usuario'}`;
+      qs('#userInfo').textContent = state.user?.email || '';
+      setStatus('online');
+      loadPosts();
+    }
+
+    function swapToAuth(){
+      show(qs('#authView'));
+      hide(qs('#appView'));
+      hide(qs('#loading'));
+      setStatus('offline');
+    }
+
+    // ======= API =======
+    async function api(path, opts){
+      const res = await fetch(`${API_BASE}${path}`, Object.assign({
+        headers:{'Content-Type':'application/json'}
+      }, opts));
+      if(!res.ok) throw new Error('Solicitud fallida');
+      return res.json().catch(()=>({}));
+    }
+
+    async function register({name,email,password}){
+      return api('/register', {method:'POST', body:JSON.stringify({name,email,password})});
+    }
+    async function login({email,password}){
+      return api('/login', {method:'POST', body:JSON.stringify({email,password})});
+    }
+    async function getPosts(){
+      return api('/posts', {method:'GET'});
+    }
+    async function createPost({author,content}){
+      return api('/posts', {method:'POST', body:JSON.stringify({author,content})});
+    }
+
+    // ======= Render del feed =======
+    function renderPosts(){
+      const feed = qs('#feed');
+      feed.innerHTML = '';
+      if(!state.posts.length){
+        const empty = ce('div',{className:'muted', style:'padding:16px'});
+        empty.textContent = 'Aún no hay publicaciones';
+        feed.appendChild(empty);
+        return;
+      }
+      state.posts.forEach(p => {
+        const item = ce('article', {className:'post'});
+        const author = ce('div', {innerHTML: `<b>${p.author || 'Anónimo'}</b>`});
+        const meta = ce('div', {className:'meta', textContent: formatDate(p.createdAt)});
+        const body = ce('div', {style:'margin-top:8px', textContent: p.content});
+        const actions = ce('div', {className:'actions'});
+        const like = ce('button', {className:'secondary', type:'button', textContent:'Me gusta'});
+        const comment = ce('button', {className:'secondary', type:'button', textContent:'Comentar'});
+        // Acciones locales (no tocan backend — no rompen nada)
+        like.addEventListener('click', ()=>{
+          like.disabled = true; like.textContent = 'Te gustó';
+        });
+        comment.addEventListener('click', ()=>{
+          const t = prompt('Escribe un comentario');
+          if(t){ comment.textContent = 'Comentado'; comment.disabled = true; }
+        });
+        actions.append(like, comment);
+        item.append(author, meta, body, actions);
+        feed.appendChild(item);
+      });
+    }
+
+    async function loadPosts(){
+      qs('#postMsg').textContent = '';
+      qs('#feed').innerHTML = '';
+      const loadingRow = ce('div', {className:'muted', style:'padding:16px', textContent:'Cargando publicaciones…'});
+      qs('#feed').appendChild(loadingRow);
+      try{
+        const posts = await getPosts();
+        state.posts = Array.isArray(posts) ? posts : [];
+      }catch{
+        state.posts = [];
+      }
+      renderPosts();
+    }
+
+    // ======= Eventos =======
+    qs('#formRegister').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const name = qs('#regName').value.trim();
+      const email = qs('#regEmail').value.trim();
+      const password = qs('#regPass').value;
+      qs('#btnRegister').disabled = true;
+      qs('#regMsg').textContent = '';
+      try{
+        await register({name,email,password});
+        state.user = { name, email };
+        swapToApp();
+      }catch{
+        qs('#regMsg').textContent = 'No se pudo registrar.';
+      }finally{
+        qs('#btnRegister').disabled = false;
+      }
+    });
+
+    qs('#formLogin').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const email = qs('#logEmail').value.trim();
+      const password = qs('#logPass').value;
+      qs('#btnLogin').disabled = true;
+      qs('#logMsg').textContent = '';
+      try{
+        const data = await login({email,password});
+        state.user = data.user || { email, name: data?.user?.name || 'Usuario' };
+        swapToApp();
+      }catch{
+        qs('#logMsg').textContent = 'Credenciales inválidas.';
+      }finally{
+        qs('#btnLogin').disabled = false;
+      }
+    });
+
+    qs('#formPost').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const content = qs('#postContent').value.trim();
+      if(!content) return;
+      qs('#postMsg').textContent = '';
+      const btns = Array.from(qs('#formPost').querySelectorAll('button'));
+      btns.forEach(b=>b.disabled=true);
+      try{
+        const newPost = await createPost({author: state.user?.name || 'Anónimo', content});
+        state.posts = [newPost, ...state.posts];
+        qs('#postContent').value = '';
+        renderPosts();
+      }catch{
+        qs('#postMsg').textContent = 'No se pudo publicar.';
+      }finally{
+        btns.forEach(b=>b.disabled=false);
+      }
+    });
+
+    qs('#btnLogout').addEventListener('click', ()=>{
+      state.user = null;
+      swapToAuth();
+    });
+
+    // ======= Inicio =======
+    setEnvHint();
+    swapToAuth();
+  </script></body>
+</html>
